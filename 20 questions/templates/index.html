@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>20 Questions Game</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background: #f7f7f7; }
+    #chatBox { border: 1px solid #ccc; padding: 20px; background: white; max-width: 600px; margin: auto; border-radius: 8px; }
+    .message { margin-bottom: 15px; }
+    .user { font-weight: bold; color: #333; }
+    .bot { color: #0066cc; }
+    input, button { padding: 10px; width: 80%; }
+    button { width: 18%; margin-left: 2%; }
+  </style>
+</head>
+<body>
+  <div id="chatBox">
+    <h2>20 Questions Game</h2>
+    <div id="messages">
+      <div class="message bot">Agent: Type "start" to begin the game.</div>
+    </div>
+    <input type="text" id="userInput" placeholder="Type your message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    function sendMessage() {
+      const inputField = document.getElementById("userInput");
+      const message = inputField.value.trim();
+      if (!message) return;
+
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.innerHTML += `<div class="message user">You: ${message}</div>`;
+      inputField.value = "";
+
+      fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      })
+      .then(res => res.json())
+      .then(data => {
+        messagesDiv.innerHTML += `<div class="message bot">Agent: ${data.response}</div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+  </script>
+</body>
+</html>
