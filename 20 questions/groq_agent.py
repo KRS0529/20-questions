@@ -5,9 +5,8 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-
 app = Flask(__name__)
-app.secret_key = "super-secret-20q-key"
+app.secret_key = "Secret_Key"
 
 agent = Agent(model=Groq(id="llama-3.3-70b-versatile"))
 
@@ -18,36 +17,37 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
-    user_input = data.get("message", "").strip()
+    user_input = data.get("message", "").strip().lower()
 
-    # Restart game if user types 'restart'
-    if user_input.lower() == "restart":
-        session.pop("history", None)
-        return jsonify({"response": "Game restarted. Let's play 20 Questions! Is it a living thing?"})
-
-    # System prompt — always use this
+    # Force 20 Questions game personality (this is not entirely working)
     system_prompt = (
-        "You are an AI playing the game 20 Questions. The user is thinking of something. "
-        "Your goal is to guess what it is by asking only yes/no questions. "
-        "Never explain, never define, never ask open-ended questions. "
-        "Ask only one yes/no question per turn. When confident, make a guess like: 'Is it a cat?'."
+        "You are an AI playing the game 20 Questions. The user is thinking of something, "
+        "and you must guess what it is by asking one yes/no question at a time. "
+        "Never explain, never offer options, never break character. If you're confident, make a guess. "
+        "Do not ever ask what the user wants to do. Just play 20 Questions."
     )
 
-    # If no history yet, simulate starting the game
-    if "history" not in session:
-        session["history"] = [
-            {"role": "user", "content": "Let's play."}
-        ]
-        response_obj = agent.run("Let's play.", system=system_prompt)
-        response = response_obj.content
-        session["history"].append({"role": "assistant", "content": response})
-        return jsonify({"response": response})
+    # Convert "start" to an actual game beginning
+    if user_input == "start":
+        user_input = "Let's play 20 Questions. I'm thinking of something."
 
-    # Normal gameplay — one question per turn
+    # Restart logic
+    if user_input == "restart":
+        session.pop("history", None)
+        return jsonify({"response": "Game restarted. Let's play 20 Questions. Is it a living thing?"})
+
+    if "history" not in session:
+        session["history"] = [{"role": "system", "content": system_prompt}]
+
+    session["history"].append({"role": "user", "content": user_input})
+
     try:
-        response_obj = agent.run(user_input, system=system_prompt)
+        response_obj = agent.run(
+            user_input,
+            system=system_prompt,
+            messages=session["history"]
+        )
         response = response_obj.content
-        session["history"].append({"role": "user", "content": user_input})
         session["history"].append({"role": "assistant", "content": response})
     except Exception as e:
         response = f"Error: {e}"
