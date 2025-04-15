@@ -5,7 +5,7 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 40px; background: #f7f7f7; }
     #chatBox { border: 1px solid #ccc; padding: 20px; background: white; max-width: 600px; margin: auto; border-radius: 8px; }
-    .message { margin-bottom: 15px; }
+    .message { margin-bottom: 15px; white-space: pre-wrap; }
     .user { font-weight: bold; color: #333; }
     .bot { color: #0066cc; }
     input, button { padding: 10px; width: 80%; }
@@ -18,18 +18,26 @@
     <div id="messages">
       <div class="message bot">Agent: Type "start" to begin the game.</div>
     </div>
-    <input type="text" id="userInput" placeholder="Type your message..." />
+    <input type="text" id="userInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter') sendMessage()" />
     <button onclick="sendMessage()">Send</button>
   </div>
 
   <script>
+    function escapeHTML(str) {
+      return str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+    }
+
     function sendMessage() {
       const inputField = document.getElementById("userInput");
       const message = inputField.value.trim();
       if (!message) return;
 
       const messagesDiv = document.getElementById("messages");
-      messagesDiv.innerHTML += `<div class="message user">You: ${message}</div>`;
+      messagesDiv.innerHTML += `<div class="message user">You: ${escapeHTML(message)}</div>`;
       inputField.value = "";
 
       fetch("/chat", {
@@ -39,7 +47,7 @@
       })
       .then(res => res.json())
       .then(data => {
-        messagesDiv.innerHTML += `<div class="message bot">Agent: ${data.response}</div>`;
+        messagesDiv.innerHTML += `<div class="message bot">Agent: ${escapeHTML(data.response)}</div>`;
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
       });
     }
