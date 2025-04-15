@@ -7,6 +7,7 @@ import os
 # Load environment variables
 load_dotenv()
 
+# Initialize Flask app
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super-secret-20q-key")
 
@@ -15,15 +16,18 @@ agent = Agent(
     model=Groq(id="llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY"))
 )
 
+# Route to load the main webpage
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# Route to handle POST chat requests
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()
     user_input = data.get("message", "").strip().lower()
 
+    # Instructions to the AI agent (system prompt)
     system_prompt = (
         "You are the guesser in a game of 20 Questions. The user is thinking of an object, and you must figure it out "
         "by asking one yes-or-no question at a time. You must remember what you’ve already asked. "
@@ -42,6 +46,7 @@ def chat():
         session["guess_made"] = False
         return jsonify({"response": "Is it a living thing?"})
 
+    # Prevent interaction if game hasn't started
     if "qa" not in session or not session["qa"]:
         return jsonify({"response": "Please type 'start' to begin the game."})
 
@@ -50,11 +55,11 @@ def chat():
         if user_input in ["yes", "y"]:
             session.pop("qa", None)
             session.pop("guess_made", None)
-            return jsonify({"response": "Yay! I got it right 🎉\n\nType 'start' to play again."})
+            return jsonify({"response": "Yay! I got it right \n\nType 'start' to play again."})
         elif user_input in ["no", "n"]:
             session.pop("qa", None)
             session.pop("guess_made", None)
-            return jsonify({"response": "Aw, I missed 😢\n\nType 'start' to try again!"})
+            return jsonify({"response": "Aw, I missed \n\nType 'start' to try again!"})
         else:
             return jsonify({"response": "Please answer 'yes' or 'no' to my guess, or type 'restart' to begin again."})
 
@@ -71,6 +76,7 @@ def chat():
     question_count = len(qa_lines)
     remaining = 20 - question_count
 
+    # Construct prompt for the agent with context
     prompt = (
         f"You have asked {question_count} questions. You have {remaining} left.\n"
         f"These are the questions and answers so far:\n"
@@ -94,12 +100,15 @@ def chat():
         if next_question.lower() in asked_questions:
             next_question += " (Try asking something else!)"
 
+        # Store the new question
         qa.append({"question": next_question, "answer": None})
         session["qa"] = qa
 
+    # Return the next question to user
     except Exception as e:
         next_question = f"Error: {e}"
 
+    # Run the app in debug mode
     return jsonify({"response": next_question})
 
 if __name__ == '__main__':
